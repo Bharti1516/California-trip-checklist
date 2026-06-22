@@ -1,0 +1,15 @@
+{
+  "name": "California Trip Packing Checklist",
+  "short_name": "CA Packing",
+  "description": "A mobile packing checklist for the California trip.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f8ff",
+  "theme_color": "#35579b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {"src":"app-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
+
