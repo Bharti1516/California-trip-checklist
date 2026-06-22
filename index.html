@@ -68,9 +68,13 @@ const raw={
 "Health":["Daily Medication (if needed)|As needed","Pain Reliever|2–4 tablets","Allergy Medicine|2–4 tablets","Band-Aids|2"],
 "Miscellaneous":["Pen|1","Mints / Gum|1 pack","Small Reusable Shopping Bag|1","AirPods / Earbuds|1"]}}
 const icons={"Checked Bag":"🧳","Backpacks":"🎒","Daily Purse":"👛"};
-const key="trip-pack-v1"; let saved=JSON.parse(localStorage.getItem(key)||"{}"); let custom=JSON.parse(localStorage.getItem(key+"-custom")||"[]"); let active="All Bags"; let installPrompt;
-let base=[];Object.entries(raw).forEach(([bag,cats])=>Object.entries(cats).forEach(([cat,items])=>items.forEach((x,i)=>{const [name,qty]=x.split("|");base.push({id:`${bag}-${cat}-${i}`,bag,cat,name,qty})}))); const all=()=>[...base,...custom];
-function save(){localStorage.setItem(key,JSON.stringify(saved));localStorage.setItem(key+"-custom",JSON.stringify(custom))}
+const key="trip-pack-v2";function readJSON(k,fallback){try{return JSON.parse(localStorage.getItem(k)||fallback)}catch{return JSON.parse(fallback)}}let saved=readJSON(key,"{}");let custom=readJSON(key+"-custom","[]");let active="All Bags";let installPrompt;
+let base=[];Object.entries(raw).forEach(([bag,cats])=>Object.entries(cats).forEach(([cat,items])=>items.forEach((x,i)=>{const [name,qty]=x.split("|");base.push({id:`${bag}-${cat}-${i}`,bag,cat,name,qty})})));const all=()=>[...base,...custom];
+function encodeProgress(){const items=all(),bytes=new Uint8Array(Math.ceil(items.length/8));items.forEach((x,i)=>{if(saved[x.id])bytes[i>>3]|=1<<(i&7)});return btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}
+function decodeProgress(code){if(!code)return;try{const raw=atob(code.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((code.length+3)%4));const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0)),items=all();items.forEach(x=>delete saved[x.id]);items.forEach((x,i)=>{if(bytes[i>>3]&(1<<(i&7)))saved[x.id]=true})}catch{}}
+function restoreProgress(){const fromHash=new URLSearchParams(location.hash.slice(1)).get("p");const cookie=document.cookie.split("; ").find(x=>x.startsWith("trip-pack-progress="));decodeProgress(fromHash||(cookie?cookie.slice(cookie.indexOf("=")+1):""))}
+restoreProgress();
+function save(){try{localStorage.setItem(key,JSON.stringify(saved));localStorage.setItem(key+"-custom",JSON.stringify(custom))}catch{}const p=encodeProgress();document.cookie=`trip-pack-progress=${p}; Max-Age=2592000; Path=/; SameSite=Lax; Secure`;history.replaceState(null,"",`${location.pathname}${location.search}#p=${p}`)}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function renderTabs(){bags.innerHTML=["All Bags",...Object.keys(raw)].map(b=>`<button class="bag-tab ${b===active?'active':''}" data-bag="${b}">${b==="All Bags"?'✨':icons[b]} ${b}</button>`).join("");bags.querySelectorAll("button").forEach(b=>b.onclick=()=>{active=b.dataset.bag;render()})}
 function visible(){const q=document.getElementById("search").value.trim().toLowerCase(),st=document.getElementById("status").value;return all().filter(x=>(active==="All Bags"||x.bag===active)&&(!q||`${x.name} ${x.cat} ${x.bag} ${x.qty}`.toLowerCase().includes(q))&&(st==="all"||(st==="done")===!!saved[x.id]))}
